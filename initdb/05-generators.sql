@@ -26,12 +26,12 @@ FROM generate_series(1,1000) AS s(i);
 -- products
 INSERT INTO products (name, sku, category_id, price, tags, description, created_at)
 SELECT
-  'Product ' || i,
+  random_product_name(),
   'SKU-' || lpad(i::text,4,'0'),
   (random_int(1,9))::smallint,
   random_float(),
   ARRAY[random_array_element(array['new','popular','discount','limited'])],
-  'Auto-generated product ' || i,
+  random_product_description(),
   random_timestamp()
 FROM generate_series(1,200) AS s(i);
 
@@ -79,6 +79,6 @@ SELECT
   random_int(1,1000)::bigint,
   random_int(1,200)::bigint,
   random_int(1,5)::smallint,
-  'Review text for product',
+  random_review_comment(),
   random_timestamp()
 FROM generate_series(1,3000) AS s(i);

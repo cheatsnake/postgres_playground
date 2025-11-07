@@ -37,3 +37,45 @@ RETURNS TIMESTAMPTZ AS $$
     - (random_int(1,60) || ' minutes')::INTERVAL
     - (random_int(1,60) || ' seconds')::INTERVAL;
 $$ LANGUAGE SQL VOLATILE;
+
+-- random product name
+CREATE OR REPLACE FUNCTION random_product_name()
+RETURNS TEXT AS $$
+    SELECT
+        CASE WHEN random() < 0.7 THEN  -- 70% chance to have adjective
+            random_array_element(ARRAY['Basic', 'Standard', 'Premium', 'Deluxe', 'Pro', 'Elite', 'Essential', 'Advanced', 'Super', 'Ultra']) || ' '
+        ELSE '' END ||
+        random_array_element(ARRAY['Widget', 'Gadget', 'Tool', 'Device', 'System', 'Kit', 'Set', 'Package', 'Product', 'Item']) ||
+        CASE WHEN random() < 0.3 THEN  -- 30% chance to have suffix
+            ' ' || random_array_element(ARRAY['Plus', 'Max', 'Lite', 'X', '2024', 'Edition', 'Bundle'])
+        ELSE '' END;
+$$ LANGUAGE SQL VOLATILE;
+
+-- random product description
+CREATE OR REPLACE FUNCTION random_product_description()
+RETURNS TEXT AS $$
+    SELECT
+        random_array_element(ARRAY['High-quality', 'Reliable', 'Innovative', 'Premium', 'Durable', 'Efficient']) || ' ' ||
+        random_array_element(ARRAY['product', 'item', 'device', 'tool', 'solution']) || ' ' ||
+        random_array_element(ARRAY['designed for', 'perfect for', 'ideal for', 'suitable for', 'made for']) || ' ' ||
+        random_array_element(ARRAY['everyday use', 'professional use', 'home use', 'all your needs', 'optimal performance']) || '.';
+$$ LANGUAGE SQL VOLATILE;
+
+-- random review comment generator
+CREATE OR REPLACE FUNCTION random_review_comment()
+RETURNS TEXT AS $$
+    SELECT
+        random_array_element(
+            ARRAY[
+                'Great product!',
+                'Excellent quality.',
+                'Highly recommended.',
+                'Not satisfied.',
+                'Disappointed.'
+            ]
+        ) ||
+        CASE WHEN random() < 0.3 THEN  -- 30% chance to add suffix
+            random_array_element(ARRAY['', ' Would buy again.', ' Fast shipping.', ' Good value.', ' Great service.'])
+        ELSE ''
+        END;
+$$ LANGUAGE SQL VOLATILE;
