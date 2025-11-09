@@ -232,6 +232,19 @@ JOIN users u ON r.user_id = u.id
 WHERE r.product_id = 1;
 ```
 
+Сalculate how many times each product was ordered:
+
+```sql
+SELECT
+    p.id,
+    p.name,
+    COUNT(oi.order_id) as times_ordered
+FROM products p
+LEFT JOIN order_items oi ON p.id = oi.product_id
+GROUP BY p.id, p.name
+ORDER BY times_ordered DESC;
+```
+
 Show last order time for each user:
 
 ```sql
@@ -258,4 +271,83 @@ JOIN orders o ON p.order_id = o.id
 WHERE o.status IN ('paid', 'shipped')
 GROUP BY DATE(p.paid_at)
 ORDER BY date DESC;
+```
+
+Show products with their order and review metrics:
+
+```sql
+SELECT
+    p.id,
+    p.name,
+    c.name as category_name,
+    p.price,
+    COUNT(DISTINCT oi.order_id) as total_orders,
+    COUNT(DISTINCT r.id) as total_reviews,
+    ROUND(AVG(r.rating), 2) as avg_rating
+FROM products p
+LEFT JOIN categories c ON p.category_id = c.id
+LEFT JOIN order_items oi ON p.id = oi.product_id
+LEFT JOIN reviews r ON p.id = r.product_id
+GROUP BY p.id, p.name, p.sku, c.name, p.price
+ORDER BY total_orders DESC, avg_rating DESC NULLS LAST;
+```
+
+Show users with their order and review statistics:
+
+```sql
+SELECT
+    u.id,
+    u.name,
+    u.email,
+    u.is_active,
+    COUNT(DISTINCT o.id) as total_orders,
+    COUNT(DISTINCT r.id) as total_reviews,
+    SUM(o.total_amount) as total_spent,
+    ROUND(AVG(r.rating), 2) as avg_rating_given,
+    MIN(o.created_at) as first_order_date,
+    MAX(o.created_at) as last_order_date
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+LEFT JOIN reviews r ON u.id = r.user_id
+GROUP BY u.id, u.name, u.email, u.is_active
+ORDER BY total_spent DESC NULLS LAST, total_orders DESC;
+```
+
+Analyze order growth for each user compared to their previous order:
+
+```sql
+SELECT
+    user_id,
+    created_at as order_date,
+    total_amount,
+    LAG(total_amount) OVER
+        (PARTITION BY user_id ORDER BY created_at) as previous_order_amount,
+    total_amount - LAG(total_amount)
+        OVER (PARTITION BY user_id ORDER BY created_at) as amount_change,
+    created_at - LAG(created_at)
+        OVER (PARTITION BY user_id ORDER BY created_at) as since_last_order
+FROM orders
+WHERE status IN ('paid', 'shipped') AND user_id = 1;
+```
+
+Show pending orders (classified by attention needed):
+
+```sql
+SELECT o.id,
+       u.name AS customer_name,
+       o.total_amount,
+       o.created_at,
+       ROUND(hp.hours_pending) AS hours_pending,
+       CASE
+           WHEN hp.hours_pending > 48 THEN 'CRITICAL'
+           WHEN hp.hours_pending > 24 THEN 'HIGH'
+           WHEN hp.hours_pending > 4 THEN 'MEDIUM'
+           ELSE 'LOW'
+       END AS priority
+FROM orders o
+JOIN users u ON o.user_id = u.id
+CROSS JOIN LATERAL
+  (SELECT EXTRACT(EPOCH FROM (NOW() - o.created_at)) / 3600 AS hours_pending) hp
+WHERE o.status = 'pending'
+ORDER BY hp.hours_pending DESC;
 ```
